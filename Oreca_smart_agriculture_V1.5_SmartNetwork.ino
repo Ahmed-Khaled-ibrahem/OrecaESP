@@ -15,6 +15,8 @@
 
    EEPROM 100 - 600 >> Loads Status Value     // Changing every restart by 6 for not exceeding 100,000 write to ESP8266
 
+
+   
 */
 
 #include <ESP8266WiFi.h>
@@ -673,9 +675,16 @@ void GetEEPROM()
   Serial.println(" Initial Load States : ");
   for (byte i = 0; i < 6; i++) {
     Load[i] = int( EEPROM.read(LoadsLocation[i]) );
-    MuxIO( 'O', i, Load[i] );  /////////////////         **************  change after for
     Serial.println(" Load: " + String(i) + " = " + String(Load[i]));
   }
+   digitalWrite(Clk, 0);   // Making Sure the clk is low
+
+    for (byte i = 0; i < 6 ; i++) {
+      digitalWrite( loadsPins[i] , Load[i] );
+    }
+    digitalWrite(Clk, 1);
+    delay(5);
+    digitalWrite(Clk, 0); 
   // ------------------------------------------
   RestartNumber = int(EEPROM.read(2));
   Serial.println("RestartNumber: " + String(RestartNumber));
@@ -717,10 +726,6 @@ void Devices(char devicetype, String XOrder[3], bool FireOrTCP)
 {
   yield();  // For ESP8266 to not dump
 
-  if (analogRead(A0) > 150) {
-    buttonReset();
-  }
-
   if (XOrder[0] == "D") // ---------------------------------------- Digital Outputs
   {
     String LoadNo = XOrder[1].substring(1);
@@ -738,32 +743,31 @@ void Devices(char devicetype, String XOrder[3], bool FireOrTCP)
     }
   }
 
-  // else {        // ----------------------------------------------- 5 switches/plugs/loads
-  //
-  //  for(byte i=0; i<3; i++){
-  //   //                        ----------- Looping in all 3 switchs --------------
-  //   if ( MuxIO('S',i,0) >= 150 )
-  //    {
-  //        Load[i] = !Load[i];
-  //        MuxIO('O',i, Load[i]);
-  //
-  //        EEPROM.write( LoadsLocation[i], Load[i] );
-  //        EEPROM.commit();
-  //        Serial.println("Load "+ String(i)+ " is "+ String(Load[i]) +" In Location: " + String(LoadsLocation[i]));
-  //        FireFlag[0] = 1;
-  //        if (FireOrTCP == 1) {
-  //        FireReport();
-  //        }
-  //
-  //      while (MuxIO('S',i,0) >= 150) {
-  //        delay(1);
-  //      }
-  //      if(i==2){
-  //        buttonReset();
-  //        }
-  //    }
-  //   }
-  //  }
+   else {        // ----------------------------------------------- 5 switches/plugs/loads
+    for(byte i=0; i<3; i++){
+     //                        ----------- Looping in all 3 switchs --------------
+     if ( MuxIO('S',i,0) >= 150 )
+      {
+          Load[i] = !Load[i];
+          MuxIO('O',i, Load[i]);
+  
+          EEPROM.write( LoadsLocation[i], Load[i] );
+          EEPROM.commit();
+          Serial.println("Load "+ String(i)+ " is "+ String(Load[i]) +" In Location: " + String(LoadsLocation[i]));
+          FireFlag[0] = 1;
+          if (FireOrTCP == 1) {
+          FireReport();
+          }
+  
+        while (MuxIO('S',i,0) >= 150) {
+          delay(1);
+        }
+        if(i==2){
+          buttonReset();
+          }
+      }
+     }
+    }
 
 }
 
@@ -1060,4 +1064,3 @@ void Sensors_init() {
   MuxIO('N', 1, 0);
   ec.begin();
 }
-"# OrecaESP" 
